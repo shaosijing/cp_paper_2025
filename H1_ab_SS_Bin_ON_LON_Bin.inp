@@ -1,0 +1,50 @@
+TITLE: Two-Part DSEM Model with Trait Loneliness Moderation;
+
+DATA:
+    FILE = "ema_mplus_clean.dat";
+
+VARIABLE:
+    NAMES = SID session lonely ss_rejected demo_gender demo_education demo_age
+            lon_TL lon_bin ss_bin lon_c ss_c;
+
+    USEVARIABLES = SID session lonely ss_rejected demo_gender demo_education demo_age
+                   lon_TL lon_bin ss_bin lon_c ss_c;
+
+    CATEGORICAL = lon_bin ss_bin;
+    LAGGED = lon_bin(1) lon_c(1) ss_bin(1) ss_c(1);
+    CLUSTER = SID;
+    BETWEEN = demo_gender demo_education demo_age lon_TL;  ! Explicitly specify between variables
+    MISSING = ALL(-999);
+
+ANALYSIS:
+    TYPE = TWOLEVEL;
+    ESTIMATOR = BAYES;
+    BITERATIONS = 10000;  ! Increase iterations
+    CHAINS = 4;
+    FBITERATIONS = 5000;
+    THIN = 10;  ! Add thinning to improve convergence
+
+MODEL:
+    %WITHIN%
+    ! Fixed autoregressive effects (not random)
+    lon_bin^ ON lon_bin^1;
+    lon_c^ ON lon_c^1;
+    ss_bin^ ON ss_bin^1;
+    ss_c^ ON ss_c^1;
+
+    !lon_c^ ON ss_bin^;    ! Binary social rejection → Continuous loneliness
+    !ss_c^ ON lon_bin^;    ! Binary loneliness → Continuous social rejection
+    
+    ss_bin^ ON lon_bin^;
+    !lon_bin^ ON ss_bin^;
+    
+    %BETWEEN%
+    ! Between-person predictors
+    lon_bin lon_c ss_bin ss_c ON demo_gender demo_education demo_age;
+
+
+OUTPUT:
+    STANDARDIZED TECH1 TECH8;  ! Remove TECH10 to simplify output
+
+PLOT:
+    TYPE = PLOT3;
